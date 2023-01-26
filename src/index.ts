@@ -8,12 +8,12 @@ import { env } from 'process';
 import { Credentials } from '@truffle/hdwallet-provider/dist/constructor/LegacyConstructor';
 require('dotenv').config()
 import erc20Abi from './abi/erc20.json'
-console.log("ENV ",env.INFURA_URL);
+// console.log("ENV ",env.INFURA_URL);
 
 ///////////////- NEED TO CHANGE -/////////////
-let INFURA_URL:Credentials = 'https://goerli.infura.io/v3/' // paste your infura url
-const takerAddress:string = '' // provide ur wallet address
-let MNEMONIC:Credentials = '' //paste your takerAddress mnemonic here
+let INFURA_URL:Credentials = 'https://goerli.infura.io/v3/<key>' // paste your infura url
+const takerAddress:string = '< address >' // provide ur wallet address
+let MNEMONIC:Credentials = '< mnemonic of address >' //paste your takerAddressmnemonic here
 //////////////////////////////////////////////
 
 //////////- Global Variables -/////////////
@@ -31,7 +31,7 @@ const web3:any = new Web3(provider);
 ///////////////////////////////////////////
 
 /**
- * 
+ * the main function which perform swap 
  * @param sellToken token you are giving
  * @param buyToken token you want in return
  * @param sellAmount amount you are giving
@@ -56,12 +56,17 @@ const getQuote = async (sellToken:string, buyToken:string, sellAmount:number, se
         try {
             // getting qoute
             const response = await axios.get(`https://goerli.api.0x.org/swap/v1/quote?${qs.stringify(params)}`);
+            if(response.status == 200) {
 
-            console.log("Quote ",response.data);
-    
-            // Perform the swap
-            let tx = await web3.eth.sendTransaction(await response.data);
-            console.log("hash : ",tx)
+                console.log("Quote ",response.data);
+        
+                // Perform the swap
+                let tx = await web3.eth.sendTransaction(await response.data);
+                console.log("hash : ",tx)
+            } else {
+                console.log("Quote faliled, maybe there will be not liquidity in DEXs for you will not be having token in your specified address")
+                console.log("REASON : ",response.data)
+            }
     
         } catch(error:any) {
             console.error(error.response.data)
@@ -77,28 +82,34 @@ const getQuote = async (sellToken:string, buyToken:string, sellAmount:number, se
             const response = await axios.get(
                 text
             );
+            if(response.status == 200){
+                console.log("Quote ", response.data);
 
-            console.log("Quote ",response.data);
+                console.log('approving before sending txn')
 
-            console.log('approving before sending txn')
-
-            let approveResult:any = await allowance(response.data)
-            if(approveResult == true){
-                console.log("in true")
-                // response.data.from = takerAddress
-                console.log("response ",response.data)
-                console.log("sending txn")
-                // Perform the swap
-                let tx = await web3.eth.sendTransaction(response.data,async function(error:any, result:any){
-                    if(error){
-                        console.log("error ",error )
-                    } else {
-                        console.log("hash ",result)
-                    }
-                });
+                let approveResult: any = await allowance(response.data)
+                if (approveResult == true) {
+                    console.log("in true")
+                    // response.data.from = takerAddress
+                    console.log("response ", response.data)
+                    console.log("sending txn")
+                    // Perform the swap
+                    let tx = await web3.eth.sendTransaction(response.data, async function (error: any, result: any) {
+                        if (error) {
+                            console.log("error ", error)
+                        } else {
+                            console.log("hash ", result)
+                        }
+                    });
+                } else {
+                    console.log("approve failed")
+                }
             } else {
-                console.log("approve failed")
+                console.log("Quote faliled, maybe there will be not liquidity in DEXs for you will not be having token in your specified address")
+                console.log("REASON : ",response.data)
             }
+
+            
 
         } catch(error:any){
             console.error("error : ",error)
@@ -108,7 +119,7 @@ const getQuote = async (sellToken:string, buyToken:string, sellAmount:number, se
 }
 
 /**
- * 
+ * This function call the contract and give allowance to perform swap
  * @param transactionObj quote object 
  */
 async function allowance(transactionObj:any) {
@@ -133,5 +144,5 @@ async function allowance(transactionObj:any) {
 }
 
 
-// getQuote(USDC,Tether,0.1,ETHdecimals,takerAddress)
+getQuote(USDC,Tether,0.1,ETHdecimals,takerAddress)
 // allowance()
